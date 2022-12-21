@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import io
-from typing import Dict, List
+from typing import Any, Dict, List
 from .program_api import Program
 
 try:
@@ -39,10 +39,12 @@ __slots__ = [
 
 class IREE:
 
-  def __init__(self, program: Program, backends: List[str], runtimes: str):
+  def __init__(self, program: Program, backends: List[str], runtimes: str,
+               compile_args: Dict[str, Any]):
     self._program = program
     self._backends = backends
     self._runtime = runtimes
+    self._compile_args = compile_args
     self._compiled_artifact = None
     self._runtime_module = None
     self._shadow_dict = dict()
@@ -52,7 +54,8 @@ class IREE:
   @staticmethod
   def compile_program(program: Program,
                       backends: List[str] = ["llvm-cpu"],
-                      runtime: str = "local-task"):
+                      runtime: str = "local-task",
+                      compile_args: Dict[str, Any] = {}):
 
     try:
       iree.compiler
@@ -65,7 +68,7 @@ class IREE:
     except NameError:
       raise Exception("iree.runtime library is required for binary compilation")
 
-    binary = IREE(program, backends, runtime)
+    binary = IREE(program, backends, runtime, compile_args)
     binary.compiled_artifact
     binary.runtime_module
     return binary
@@ -78,7 +81,10 @@ class IREE:
       ir_module.operation.write_bytecode(file=output)
       bytecode = output.getvalue()
       self._compiled_artifact = iree.compiler.tools.compile_str(
-          bytecode, target_backends=self._backends, input_type="mhlo")
+          input_str=bytecode,
+          target_backends=self._backends,
+          input_type="mhlo",
+          **self._compile_args)
 
     return self._compiled_artifact
 
