@@ -23,6 +23,9 @@ from jaxlib.mlir.dialects import (
     stablehlo as stablehlo_d,
 )
 
+from jax.sharding import SingleDeviceSharding
+from jax import Array
+
 
 def create_context(*, debug: bool = True) -> ir.Context:
   context = ir.Context()
@@ -45,7 +48,7 @@ def create_global(symbol_table: ir.SymbolTable,
   op = ml_program_d.GlobalOp(
       sym_visibility=ir.StringAttr.get(visibility),
       sym_name=ir.StringAttr.get(symbol),
-      type=ir.TypeAttr.get(ir_type),
+      type_=ir.TypeAttr.get(ir_type),
       is_mutable=ir.UnitAttr.get() if mutable else None,
       value=initial_value,
   )
@@ -87,4 +90,22 @@ def create_array_attribute(array, ir_types: Sequence[ir.Type]) -> ir.Attribute:
   if len(ir_types) != 1:
     raise ValueError("Only single-typed arrays are supported")
   ranked_tensor_type = ir.RankedTensorType(ir_types[0])
-  return ir.DenseElementsAttr.get(array, type=ranked_tensor_type.element_type)
+
+  # Check if array implements the buffer protocol.
+  try:
+    memoryview(array)
+    array_buffer = array
+  except:
+    # Try to fallback to a single shard array.
+    # TODO: Rework to avoid using member _arrays. Currently it is not possible to get to the
+    # device arrays as proper buffers. DenseElementsAttr.get expects a buffer.
+    if isinstance(array, Array) and (isinstance(
+        array.sharding, SingleDeviceSharding) or len(array._arrays) == 1):
+      array_buffer = array._arrays[0]
+    else:
+      raise TypeError(
+          f"Can not create array attribute from type \"${type(array)}\""
+          " with sharding \"${array.sharding}\".")
+
+  return ir.DenseElementsAttr.get(array_buffer,
+                                  type=ranked_tensor_type.element_type)

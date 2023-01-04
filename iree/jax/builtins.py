@@ -48,7 +48,8 @@ class jit_kernel(tracing.CallableIntrinsic):
 
   def __init__(self, wrapped_f, *, wrap_with_jit: bool = True):
     self.wrapped_f = wrapped_f
-    self.jit_f = jax.jit(self.wrapped_f, backend="iree") if wrap_with_jit else self.wrapped_f
+    self.jit_f = jax.jit(self.wrapped_f,
+                         backend="iree") if wrap_with_jit else self.wrapped_f
 
   def __repr__(self):
     return f"<Exportable Pure Func: {self.wrapped_f}>"
@@ -99,7 +100,7 @@ class jit_kernel(tracing.CallableIntrinsic):
 
     # Now convert each IR result to an intrinsic.
     # TODO: Switch based on values not an array?
-    flat_results_aval = lowered._lowering.compile_args["out_avals"]
+    flat_results_aval = lowered._lowering.compile_args["global_out_avals"]
     flat_results_py = map(
         lambda aval, ir_value: array_types.IrValueArray(aval, ir_value),
         flat_results_aval, flat_results_ir)
