@@ -45,7 +45,7 @@ def create_global(symbol_table: ir.SymbolTable,
   op = ml_program_d.GlobalOp(
       sym_visibility=ir.StringAttr.get(visibility),
       sym_name=ir.StringAttr.get(symbol),
-      type=ir.TypeAttr.get(ir_type),
+      type_=ir.TypeAttr.get(ir_type),
       is_mutable=ir.UnitAttr.get() if mutable else None,
       value=initial_value,
   )
